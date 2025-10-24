@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>待办事项列表 | 天气查询</title>
+    <!-- 引入天气图标库 -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        /* 全局变量 - 主题色与通用配置 */
+        :root {
+            --primary-color-1: rgb(113, 65, 168);
+            --primary-color-2: rgb(44, 114, 251);
+            --accent-color: mediumturquoise;
+            --danger-color: #ff4d4d;
+            --text-color: #333;
+            --text-light: #666;
+            --bg-light: aliceblue;
+            --shadow: 0 4px 12px rgba(0,0,0,0.05);
+            --radius: 10px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(to right, var(--primary-color-1), var(--primary-color-2));
+            min-height: 100vh;
+            padding: 20px 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+        }
+
+        .todo-app {
+            width: 90%;
+            max-width: 1000px;
+            min-height: 650px;
+            background-color: var(--bg-light);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin: 0 auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        /* 头部区域 */
+        header {
+            width: 80%;
+            margin: 0 auto;
+            padding: 15px 0;
+        }
+
+        .title {
+            margin: 10px 0 20px;
+            font-size: 30px;
+            font-weight: 700;
+            text-align: center;
+            background-image: linear-gradient(45deg, deepskyblue, var(--accent-color), black);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* 天气查询区域 */
+        .weather-container {
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: var(--radius);
+            padding: 15px;
+            box-shadow: var(--shadow);
+            margin-bottom: 10px;
+        }
+
+        .weather-search {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .city-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid var(--accent-color);
+            border-radius: var(--radius);
+            font-size: 15px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .city-input:focus {
+            border-color: var(--primary-color-1);
+            box-shadow: 0 0 0 2px rgba(113,65,168,0.1);
+        }
+
+        .search-btn {
+            padding: 0 20px;
+            background: linear-gradient(to right, var(--primary-color-1), var(--primary-color-2));
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 15px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(113,65,168,0.3);
+        }
+
+        /* 天气结果样式 */
+        .weather-result {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding-top: 10px;
+            border-top: 1px dashed #eee;
+        }
+
+        .weather-result.show {
+            display: grid;
+        }
+
+        .weather-main {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .weather-icon {
+            font-size: 60px;
+            color: #44b1fa;
+        }
+
+        .weather-temp {
+            font-size: 40px;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .weather-city {
+            font-size: 18px;
+            color: var(--text-light);
+            margin-bottom: 5px;
+        }
+
+        .weather-desc {
+            font-size: 16px;
+            color: var(--text-light);
+        }
+
+        .weather-details {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .weather-detail-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+
+        .weather-detail-item i {
+            color: var(--primary-color-1);
+            width: 20px;
+        }
+
+        .weather-loading, .weather-error {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-light);
+            display: none;
+        }
+
+        .weather-loading.show, .weather-error.show {
+            display: block;
+        }
+
+        .retry-btn {
+            margin-top: 10px;
+            padding: 5px 15px;
+            background: transparent;
+            border: 1px solid var(--primary-color-1);
+            color: var(--primary-color-1);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .retry-btn:hover {
+            background-color: var(--primary-color-1);
+            color: white;
+        }
+
+        /* 输入区域 */
+        .input-container {
+            width: 80%;
+            margin: 0 auto 20px;
+        }
+
+        .todo-input-group {
+            display: flex;
+            align-items: center;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .todo-input {
+            padding-left: 15px;
+            border: 1px solid var(--accent-color);
+            outline: none;
+            width: calc(100% - 100px);
+            height: 53px;
+            border-radius: 20px 0 0 20px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+
+        .todo-input:focus {
+            border-color: var(--primary-color-1);
+            box-shadow: 0 0 0 2px rgba(113,65,168,0.1);
+        }
+
+        .add-btn {
+            width: 100px;
+            height: 53px;
+            border-radius: 0 20px 20px 0;
+            line-height: 53px;
+            text-align: center;
+            background: linear-gradient(to right, var(--primary-color-1), var(--primary-color-2));
+            user-select: none;
+            cursor: pointer;
+            color: white;
+            transition: all 0.3s;
+        }
+
+        .add-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(113,65,168,0.3);
+        }
+
+        /* 输入框下方辅助区域 */
+        .input-auxiliary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        /* 时间选择区域 */
+        .time-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            height: 40px;
+        }
+
+        .time-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            color: var(--text-light);
+            font-size: 15px;
+        }
+
+        .custom-checkbox {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+            height: 0;
+            width: 0;
+        }
+
+        .checkmark {
+            position: relative;
+            height: 20px;
+            width: 20px;
+            background-color: #f1f1f1;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            transition: all 0.3s;
+        }
+
+        .custom-checkbox:checked ~ .checkmark {
+            background: linear-gradient(to right, var(--primary-color-1), var(--primary-color-2));
+            border-color: transparent;
+        }
+
+        .checkmark:after {
+            content: "";
+            position: absolute;
+            display: none;
+            left: 7px;
+            top: 3px;
+            width: 6px;
+            height: 12px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .custom-checkbox:checked ~ .checkmark:after {
+            display: block;
+        }
+
+        .label-text {
+            transition: color 0.3s;
+        }
+
+        .custom-checkbox:checked ~ .label-text {
+            color: var(--primary-color-1);
+            font-weight: 500;
+        }
+
+        .time-picker {
+            height: 40px;
+            padding: 0 15px;
+            border: 1px solid #ddd;
+            border-radius: var(--radius);
+            font-size: 15px;
+            color: var(--text-light);
+            background-color: white;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+
+        .time-picker:enabled {
+            border-color: var(--accent-color);
+        }
+
+        .time-picker:enabled:hover, .time-picker:enabled:focus {
+            border-color: var(--primary-color-1);
+            box-shadow: 0 0 0 2px rgba(113,65,168,0.1);
+            outline: none;
+        }
+
+        .time-picker:disabled {
+            background-color: #f8f8f8;
+            color: #aaa;
+            border-color: #eee;
+            cursor: not-allowed;
+        }
+
+        /* 实时时间 */
+        .current-time {
+            font-size: 16px;
+            color: var(--text-light);
+            padding: 5px 10px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: var(--radius);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* 待办项区域 */
+        .todo-list {
+            width: 80%;
+            margin: 0 auto;
+        }
+
+        .empty-tip {
+            text-align: center;
+            color: var(--text-light);
+            padding: 30px 0;
+            font-size: 16px;
+            display: none;
+        }
+
+        .empty-tip.show {
+            display: block;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-sizing: border-box;
+            width: 100%;
+            height: auto;
+            min-height: 50px;
+            margin: 8px auto;
+            padding: 16px;
+            border-radius: 20px;
+            box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 20px;
+            transition: all 0.3s;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .todo-item.completed {
+            color: #999;
+        }
+
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+        }
+
+        .todo-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .todo-text {
+            transition: all 0.3s;
+        }
+
+        .todo-time {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-left: 10px;
+            padding: 2px 8px;
+            background-color: rgba(113,65,168,0.05);
+            border-radius: 4px;
+        }
+
+        .del-btn {
+            cursor: pointer;
+            color: var(--danger-color);
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .del-btn:hover {
+            background-color: rgba(255,77,77,0.1);
+        }
+
+        /* 操作反馈提示 */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) scale(0.8);
+            padding: 8px 15px;
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            border-radius: 4px;
+            font-size: 14px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .weather-result {
+                grid-template-columns: 1fr;
+            }
+
+            .input-auxiliary {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .todo-input {
+                width: calc(100% - 80px);
+            }
+
+            .add-btn {
+                width: 80px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="todo-app">
+        <!-- 头部区域：标题 + 天气查询 -->
+        <header>
+            <h1 class="title">添加代办事项</h1>
+
+            <!-- 天气查询区域 -->
+            <div class="weather-container">
+                <div class="weather-search">
+                    <input type="text" class="city-input" placeholder="输入城市名查询天气">
+                    <button class="search-btn">
+                        <i class="fa fa-search"></i> 查询
+                    </button>
+                </div>
+                <!-- 天气结果展示区 -->
+                <div class="weather-result"></div>
+            </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <main>
+            <!-- 输入区域 -->
+            <div class="input-container">
+                <!-- 输入框和添加按钮 -->
+                <div class="todo-input-group">
+                    <input class="todo-input" type="text" placeholder="添加新事项">
+                    <div class="add-btn">添加</div>
+                </div>
+
+                <!-- 输入框下方辅助区域 -->
+                <div class="input-auxiliary">
+                    <!-- 时间选择区域 -->
+                    <div class="time-option">
+                        <label class="time-checkbox">
+                            <input type="checkbox" id="add-time" class="custom-checkbox">
+                            <span class="checkmark"></span>
+                            <span class="label-text">添加时间</span>
+                        </label>
+                        <input type="datetime-local" class="time-picker" disabled>
+                    </div>
+
+                    <!-- 实时时间显示 -->
+                    <div class="current-time"></div>
+                </div>
+            </div>
+
+            <!-- 待办项容器 -->
+            <div class="todo-list">
+                <div class="empty-tip">暂无待办事项，添加一个吧~</div>
+
+                <!-- 初始待办项 -->
+                <div class="todo-item">
+                    <div class="todo-content">
+                        <input type="checkbox" class="todo-check">
+                        <span class="todo-text">吃饭</span>
+                    </div>
+                    <div class="del-btn">del</div>
+                </div>
+
+                <div class="todo-item">
+                    <div class="todo-content">
+                        <input type="checkbox" class="todo-check">
+                        <span class="todo-text">喝水</span>
+                    </div>
+                    <div class="del-btn">del</div>
+                </div>
+
+                <div class="todo-item">
+                    <div class="todo-content">
+                        <input type="checkbox" class="todo-check">
+                        <span class="todo-text">撒尿</span>
+                    </div>
+                    <div class="del-btn">del</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 操作反馈提示 -->
+        <div class="toast"></div>
+    </div>
+
+    <script>
+        // DOM元素获取
+        const dom = {
+            // 待办项相关
+            todoInput: document.querySelector('.todo-input'),
+            addBtn: document.querySelector('.add-btn'),
+            todoList: document.querySelector('.todo-list'),
+            emptyTip: document.querySelector('.empty-tip'),
+            // 时间相关
+            addTimeCheckbox: document.getElementById('add-time'),
+            timePicker: document.querySelector('.time-picker'),
+            currentTimeElement: document.querySelector('.current-time'),
+            // 天气相关
+            cityInput: document.querySelector('.city-input'),
+            searchBtn: document.querySelector('.search-btn'),
+            weatherResult: document.querySelector('.weather-result'),
+            // 提示框
+            toast: document.querySelector('.toast')
+        };
+
+        // 初始化检查空列表状态
+        function checkEmptyList() {
+            const items = dom.todoList.querySelectorAll('.todo-item');
+            dom.emptyTip.classList.toggle('show', items.length === 0);
+        }
+
+        // 显示提示信息
+        function showToast(message) {
+            dom.toast.textContent = message;
+            dom.toast.classList.add('show');
+            setTimeout(() => dom.toast.classList.remove('show'), 2000);
+        }
+
+        // 检查事项是否重复
+        function isDuplicateTodo(text) {
+            const trimmedText = text.trim();
+            // 获取所有现有事项的文本内容
+            const existingTodos = dom.todoList.querySelectorAll('.todo-text');
+            for (const todo of existingTodos) {
+                // 去除现有事项的前后空格后比较
+                if (todo.textContent.trim() === trimmedText) {
+                    return true; // 找到重复项
+                }
+            }
+            return false; // 无重复
+        }
+
+        // 时间处理模块
+        const timeModule = {
+            // 初始化时间选择器
+            initTimePicker() {
+                dom.addTimeCheckbox.addEventListener('change', () => {
+                    dom.timePicker.disabled = !dom.addTimeCheckbox.checked;
+                    if (dom.addTimeCheckbox.checked) {
+                        const now = new Date();
+                        const dateTime = now.toISOString().slice(0, 16);
+                        dom.timePicker.value = dateTime;
+                    }
+                });
+            },
+
+            // 实时时间更新
+            updateCurrentTime() {
+                const now = new Date();
+                const options = {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    weekday: 'short',
+                    hour12: false
+                };
+                const formattedTime = now.toLocaleString('zh-CN', options);
+                dom.currentTimeElement.textContent = formattedTime;
+            },
+
+            // 格式化时间（用于待办项）
+            formatTime(dateString) {
+                const date = new Date(dateString);
+                return `${date.getMonth() + 1}月${date.getDate()}日 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+            }
+        };
+
+        // 待办项处理模块
+        const todoModule = {
+            // 初始化事件监听
+            initEvents() {
+                // 添加待办项
+                dom.addBtn.addEventListener('click', () => this.addTodo());
+                dom.todoInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') this.addTodo();
+                });
+
+                // 事件委托：处理待办项的勾选和删除
+                dom.todoList.addEventListener('click', (e) => {
+                    const target = e.target;
+                    // 处理勾选
+                    if (target.classList.contains('todo-check')) {
+                        const item = target.closest('.todo-item');
+                        item.classList.toggle('completed', target.checked);
+                    }
+                    // 处理删除
+                    if (target.classList.contains('del-btn')) {
+                        const item = target.closest('.todo-item');
+                        item.style.opacity = '0';
+                        setTimeout(() => {
+                            item.remove();
+                            checkEmptyList();
+                            showToast('已删除待办项');
+                        }, 300);
+                    }
+                });
+            },
+
+            // 添加待办项
+            addTodo() {
+                const text = dom.todoInput.value.trim();
+                if (!text) {
+                    showToast('请输入待办事项内容');
+                    return;
+                }
+
+                // 检查是否重复
+                if (isDuplicateTodo(text)) {
+                    showToast('该事项已存在，请不要重复添加');
+                    return;
+                }
+
+                // 处理时间
+                let timeHtml = '';
+                if (dom.addTimeCheckbox.checked && dom.timePicker.value) {
+                    timeHtml = `<span class="todo-time">${timeModule.formatTime(dom.timePicker.value)}</span>`;
+                }
+
+                // 创建新待办项
+                const newTodo = document.createElement('div');
+                newTodo.className = 'todo-item';
+                newTodo.innerHTML = `
+                    <div class="todo-content">
+                        <input type="checkbox" class="todo-check">
+                        <span class="todo-text">${text}</span>
+                        ${timeHtml}
+                    </div>
+                    <div class="del-btn">del</div>
+                `;
+
+                dom.todoList.appendChild(newTodo);
+                showToast('添加成功');
+
+                // 重置输入
+                dom.todoInput.value = '';
+                dom.addTimeCheckbox.checked = false;
+                dom.timePicker.disabled = true;
+                dom.timePicker.value = '';
+
+                checkEmptyList();
+            }
+        };
+
+        // 天气查询模块
+        const weatherModule = {
+            API_KEY: '7a63b913d6a94ec5b881a524a5bf9a8c',
+            WEATHER_API_URL: 'https://devapi.qweather.com/v7/weather/now',
+            CITY_API_URL: 'https://geoapi.qweather.com/v2/city/lookup',
+
+            // 初始化事件
+            initEvents() {
+                dom.searchBtn.addEventListener('click', () => this.searchWeather());
+                dom.cityInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') this.searchWeather();
+                });
+            },
+
+            // 根据天气代码获取图标
+            getWeatherIcon(weatherCode) {
+                const code = parseInt(weatherCode);
+                if (code >= 100 && code < 200) return '<i class="fa fa-bolt" style="color:#f9d71c;"></i>';
+                if (code >= 200 && code < 300) return '<i class="fa fa-tint" style="color:#44b1fa;"></i>';
+                if (code >= 300 && code < 400) return '<i class="fa fa-cloud-rain" style="color:#8ec5fc;"></i>';
+                if (code >= 500 && code < 600) return '<i class="fa fa-snowflake-o" style="color:#e0f7fa;"></i>';
+                if (code >= 600 && code < 700) return '<i class="fa fa-thermometer-empty" style="color:#b2ebf2;"></i>';
+                if (code >= 700 && code < 800) return '<i class="fa fa-smog" style="color:#bdbdbd;"></i>';
+                if (code === 800) return '<i class="fa fa-sun-o" style="color:#ffcc00;"></i>';
+                if (code > 800) return '<i class="fa fa-cloud" style="color:#e0e0e0;"></i>';
+                return '<i class="fa fa-question-circle" style="color:#9e9e9e;"></i>';
+            },
+
+            // 显示加载状态
+            showLoading() {
+                dom.weatherResult.innerHTML = '<div class="weather-loading show"><i class="fa fa-spinner fa-spin"></i> 正在查询天气...</div>';
+                dom.weatherResult.classList.add('show');
+            },
+
+            // 显示错误信息
+            showError(message) {
+                dom.weatherResult.innerHTML = `
+                    <div class="weather-error show">
+                        <i class="fa fa-exclamation-triangle" style="color:#ff9800;"></i> ${message}
+                        <button class="retry-btn">重试</button>
+                    </div>
+                `;
+                dom.weatherResult.classList.add('show');
+                // 绑定重试按钮事件
+                dom.weatherResult.querySelector('.retry-btn').addEventListener('click', () => this.searchWeather());
+            },
+
+            // 查询天气
+            async searchWeather() {
+                const cityName = dom.cityInput.value.trim();
+                if (!cityName) {
+                    this.showError('请输入城市名');
+                    return;
+                }
+
+                try {
+                    this.showLoading();
+
+                    // 1. 获取城市ID
+                    const cityRes = await fetch(
+                        `${this.CITY_API_URL}?location=${encodeURIComponent(cityName)}&key=${this.API_KEY}`,
+                        { mode: 'cors' }
+                    );
+                    const cityData = await cityRes.json();
+
+                    // 处理城市查询错误
+                    if (cityData.code !== '200' || !cityData.location?.length) {
+                        const errorMsg = this.getErrorCodeMsg(cityData.code) || '未找到该城市，请检查名称';
+                        this.showError(errorMsg);
+                        return;
+                    }
+
+                    const { id: cityId, name: cityFullName } = cityData.location[0];
+
+                    // 2. 查询天气
+                    const weatherRes = await fetch(
+                        `${this.WEATHER_API_URL}?location=${cityId}&key=${this.API_KEY}`,
+                        { mode: 'cors' }
+                    );
+                    const weatherData = await weatherRes.json();
+
+                    // 处理天气查询错误
+                    if (weatherData.code !== '200') {
+                        const errorMsg = this.getErrorCodeMsg(weatherData.code) || '天气查询失败';
+                        this.showError(errorMsg);
+                        return;
+                    }
+
+                    // 3. 展示天气结果
+                    const now = weatherData.now;
+                    dom.weatherResult.innerHTML = `
+                        <div class="weather-main">
+                            <div class="weather-icon">${this.getWeatherIcon(now.icon)}</div>
+                            <div>
+                                <div class="weather-city">${cityFullName}</div>
+                                <div class="weather-temp">${now.temp}°C</div>
+                                <div class="weather-desc">${now.text}</div>
+                            </div>
+                        </div>
+                        <div class="weather-details">
+                            <div class="weather-detail-item"><i class="fa fa-tint"></i> 湿度: ${now.humidity}%</div>
+                            <div class="weather-detail-item"><i class="fa fa-location-arrow"></i> 风向: ${now.windDir}</div>
+                            <div class="weather-detail-item"><i class="fa fa-wind"></i> 风力: ${now.windScale}级</div>
+                            <div class="weather-detail-item"><i class="fa fa-eye"></i> 能见度: ${now.vis}公里</div>
+                            <div class="weather-detail-item"><i class="fa fa-clock-o"></i> 更新时间: ${now.obsTime.slice(11)}</div>
+                        </div>
+                    `;
+                    dom.weatherResult.classList.add('show');
+
+                } catch (error) {
+                    console.error('天气查询错误:', error);
+                    this.showError(`网络错误: ${error.message || '请检查网络连接'}`);
+                }
+            },
+
+            // 和风天气错误码说明（部分常见）
+            getErrorCodeMsg(code) {
+                const errorMap = {
+                    '400': '请求参数错误',
+                    '401': 'API密钥错误或未激活',
+                    '402': 'API密钥已过期',
+                    '403': 'API密钥无权限访问该接口',
+                    '404': '请求的资源不存在',
+                    '429': '请求过于频繁，请稍后再试',
+                    '500': '服务器内部错误'
+                };
+                return errorMap[code] || null;
+            }
+        };
+
+        // 初始化应用
+        function initApp() {
+            // 初始化模块
+            timeModule.initTimePicker();
+            todoModule.initEvents();
+            weatherModule.initEvents();
+
+            // 启动实时时间更新
+            timeModule.updateCurrentTime();
+            setInterval(() => timeModule.updateCurrentTime(), 1000);
+
+            // 检查初始列表状态
+            checkEmptyList();
+        }
+
+        // 启动应用
+        initApp();
+    </script>
+</body>
+</html>
